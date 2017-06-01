@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312" />
+<title>剪切地图坐标工具</title>
+<script type="text/javascript" src="http://apps.bdimg.com/libs/jquery/1.6.4/jquery.js"></script>
+<script type="text/javascript" src="http://api.map.baidu.com/api?v=1.2"></script>
+</head>
+<body>
+	<div><p>选取地区 <select id="mapRegionSelect" ><option value="volvo" >请选择地区</option></select>
+	选择区域 <select id="mapAreaSelect" ><option value="volvo" >请选择区域</option></select>
+	<input id="startBtn" type="button" onclick="MapData.startCoord();" value="获取开始和结束坐标" />
+	<input id="startBtn" type="button" onclick="MapData.startAccessPoint();" value="开启取点工具" />
+	<input id="startBtn" type="button" onclick="MapData.dealWithData();" value="处理数据" />
+	<input id="startBtn" type="button" onclick="MapData.dealWithData_1();" value="处理数据1" />
+	<input id="startBtn" type="button" onclick="MapData.saveData();" value="保存" />
+	
+	</p></div>
+	<div style="min-height: 600px; width: 100%;" id="map">
+	</div>
+	
+</body>
+<script type="text/javascript">
+MapData = {
+	startCoor:false,//是否开始获取开始和结束坐标
+	accessPoint:false,
+	data:[],
+	formData:[],
+	coordData:[],
+	mapDataArea : [],
+	accessPointData:[],
+	mapDataArea_0:[],
+	mapDataArea_1:[],
+	init:function(){
+		for(var i = 0; i < MapData.data.length; i++){
+			$("#mapRegionSelect").append("<option value='"+i+"'>"+MapData.data[i].properties.name +"</option>");
+		}
+		$('#mapRegionSelect').change(function(){
+			$("#mapAreaSelect").empty();
+			$("#mapAreaSelect").append("<option value='volvo'>请选择区域</option>");
+			for(var i = 0; i < MapData.data[$('#mapRegionSelect').val()].geometry.coordinates.length; i++){
+				$("#mapAreaSelect").append("<option value='"+i+"'>区域"+ i +"</option>");
+			}
+			$('#mapAreaSelect').change(function(){
+				var geometry = MapData.data[$('#mapRegionSelect').val()].geometry,
+						type = geometry.type,
+						mapDataArea;
+
+				if (type === "Polygon") {
+					mapDataArea = geometry.coordinates[0];
+				} else {
+					mapDataArea = geometry.coordinates[$('#mapAreaSelect').val()][0];
+				}
+				MapData.mapDataArea = mapDataArea;
+				var point = new Array(); //存放标注点经纬信息的数组
+                    var marker = new Array(); //存放标注点对象的数组
+                    var info = new Array(); //存放提示信息窗口对象的数组
+
+
+                    for (var i = 0; i < mapDataArea.length; i++) {
+                        var p0 = mapDataArea[i][0];//markerArr[i].point.split(",")[0]; //
+                        var p1 = mapDataArea[i][1];//markerArr[i].point.split(",")[1]; //按照原数组的point格式将地图点坐标的经纬度分别提出来
+                        point[i] = new window.BMap.Point(p0, p1); //循环生成新的地图点
+                        marker[i] = new window.BMap.Marker(point[i]); //按照地图点坐标生成标记
+                        map.addOverlay(marker[i]);
+						marker[i].addEventListener("click", function(){    
+							var coordArr = [];
+							if(MapData.tartCoor){
+								coordArr.push(this.point.lng);								
+								coordArr.push(this.point.lat);
+								MapData.coordData.push(coordArr);
+							}
+							if( MapData.coordData.length > 1){
+								MapData.tartCoor = false;
+							}
+						});
+                    }
+
+			});
+		});
+		MapData.initMap();
+	 
+	},
+	initMap: function(){
+	},
+	startCoord: function(){
+		MapData.tartCoor = true;
+	},
+	startAccessPoint: function(){
+		MapData.accessPoint = true;
+	},
+	dealWithData:function(){
+		var startCutt = false;
+		var mapDataArea = MapData.mapDataArea;
+		var mapDataArea_0 = [];
+		var mapDataArea_1 = [];
+		for (var i = 0; i < mapDataArea.length; i++) {
+			var p0 = mapDataArea[i][0];//markerArr[i].point.split(",")[0]; //
+			var p1 = mapDataArea[i][1];//markerArr[i].point.split(",")[1]; //按照原数组的point格式将地图点坐标的经纬度分别提出来
+			if((MapData.coordData[0][0] == p0 && MapData.coordData[0][1] == p1) || (MapData.coordData[1][0] == p0 && MapData.coordData[1][1] == p1)){
+				if(!startCutt){
+					startCutt = true;
+				}else{
+					startCutt = false;
+				}
+			}
+			var coordArr = [];
+			coordArr.push(p0);								
+			coordArr.push(p1);
+			if(startCutt){
+				mapDataArea_0.push(coordArr);
+			}else{
+				mapDataArea_1.push(coordArr);
+			}
+		}
+		MapData.mapDataArea_0 = [];
+		MapData.mapDataArea_0 = mapDataArea_0;
+		for(var i =0; i < MapData.accessPointData.length; i++){
+			MapData.mapDataArea_0.push(MapData.accessPointData[i]);
+		}
+
+
+		mapDataArea_0 = [];
+		mapDataArea_1 = [];
+		for (var i = 0; i < mapDataArea.length; i++) {
+			var p0 = mapDataArea[i][0];//markerArr[i].point.split(",")[0]; //
+			var p1 = mapDataArea[i][1];//markerArr[i].point.split(",")[1]; //按照原数组的point格式将地图点坐标的经纬度分别提出来
+			if((MapData.coordData[0][0] == p0 && MapData.coordData[0][1] == p1) || (MapData.coordData[1][0] == p0 && MapData.coordData[1][1] == p1)){
+				if(!startCutt){
+					startCutt = true;
+					for(var j = MapData.accessPointData.length - 1; j >=0; j--){
+						mapDataArea_1.push(MapData.accessPointData[j]);
+					}
+				}else{
+					startCutt = false;
+				}
+			}
+			var coordArr = [];
+			coordArr.push(p0);								
+			coordArr.push(p1);
+			if(startCutt){
+				mapDataArea_0.push(coordArr);
+			}else{
+				mapDataArea_1.push(coordArr);
+			}
+		}
+
+		MapData.mapDataArea_1 = [];
+		MapData.mapDataArea_1 = mapDataArea_1;
+
+		map.clearOverlays();
+		
+		var pointArr = [];    //数组，放经纬度信息
+		for (var i = 0; i < MapData.mapDataArea_0.length; i++) {
+			pointArr.push(new BMap.Point(MapData.mapDataArea_0[i][0] ,MapData.mapDataArea_0[i][1]));
+		}
+		var polyline = new BMap.Polyline();    
+		polyline.setPath(pointArr);   //设置折线的点数组
+		map.addOverlay(polyline);   
+
+		var pointArr_1 = [];    //数组，放经纬度信息
+		for (var i = 0; i < MapData.mapDataArea_1.length; i++) {
+			pointArr_1.push(new BMap.Point(MapData.mapDataArea_1[i][0] ,MapData.mapDataArea_1[i][1]));
+		}
+		var polyline_1 = new BMap.Polyline();    
+		polyline_1.setPath(pointArr_1);   //设置折线的点数组
+		map.addOverlay(polyline_1);  
+	},
+	dealWithData_1:function(){
+		var startCutt = false;
+		var mapDataArea = MapData.mapDataArea;
+		var mapDataArea_0 = [];
+		var mapDataArea_1 = [];
+		for (var i = 0; i < mapDataArea.length; i++) {
+			var p0 = mapDataArea[i][0];//markerArr[i].point.split(",")[0]; //
+			var p1 = mapDataArea[i][1];//markerArr[i].point.split(",")[1]; //按照原数组的point格式将地图点坐标的经纬度分别提出来
+			if((MapData.coordData[0][0] == p0 && MapData.coordData[0][1] == p1) || (MapData.coordData[1][0] == p0 && MapData.coordData[1][1] == p1)){
+				if(!startCutt){
+					startCutt = true;
+				}else{
+					startCutt = false;
+				}
+			}
+			var coordArr = [];
+			coordArr.push(p0);								
+			coordArr.push(p1);
+			if(startCutt){
+				mapDataArea_0.push(coordArr);
+			}else{
+				mapDataArea_1.push(coordArr);
+			}
+		}
+		MapData.mapDataArea_0 = [];
+		MapData.mapDataArea_0 = mapDataArea_0;
+		for(var i = MapData.accessPointData.length -1 ; i >= 0; i--){
+			MapData.mapDataArea_0.push(MapData.accessPointData[i]);
+		}
+
+
+		mapDataArea_0 = [];
+		mapDataArea_1 = [];
+		for (var i = 0; i < mapDataArea.length; i++) {
+			var p0 = mapDataArea[i][0];//markerArr[i].point.split(",")[0]; //
+			var p1 = mapDataArea[i][1];//markerArr[i].point.split(",")[1]; //按照原数组的point格式将地图点坐标的经纬度分别提出来
+			if((MapData.coordData[0][0] == p0 && MapData.coordData[0][1] == p1) || (MapData.coordData[1][0] == p0 && MapData.coordData[1][1] == p1)){
+				if(!startCutt){
+					startCutt = true;
+					for(var j = 0; j < MapData.accessPointData.length; j++){
+						mapDataArea_1.push(MapData.accessPointData[j]);
+					}
+				}else{
+					startCutt = false;
+				}
+			}
+			var coordArr = [];
+			coordArr.push(p0);								
+			coordArr.push(p1);
+			if(startCutt){
+				mapDataArea_0.push(coordArr);
+			}else{
+				mapDataArea_1.push(coordArr);
+			}
+		}
+
+		MapData.mapDataArea_1 = [];
+		MapData.mapDataArea_1 = mapDataArea_1;
+
+		map.clearOverlays();
+		
+		var pointArr = [];    //数组，放经纬度信息
+		for (var i = 0; i < MapData.mapDataArea_0.length; i++) {
+			pointArr.push(new BMap.Point(MapData.mapDataArea_0[i][0] ,MapData.mapDataArea_0[i][1]));
+		}
+		var polyline = new BMap.Polyline();    
+		polyline.setPath(pointArr);   //设置折线的点数组
+		map.addOverlay(polyline);   
+
+		var pointArr_1 = [];    //数组，放经纬度信息
+		for (var i = 0; i < MapData.mapDataArea_1.length; i++) {
+			pointArr_1.push(new BMap.Point(MapData.mapDataArea_1[i][0] ,MapData.mapDataArea_1[i][1]));
+		}
+		var polyline_1 = new BMap.Polyline();    
+		polyline_1.setPath(pointArr_1);   //设置折线的点数组
+		map.addOverlay(polyline_1);  
+	},
+	saveData:function(){
+		console.info(MapData.data);
+		var arr = [];
+		arr.push(MapData.mapDataArea_1)
+		MapData.data[$('#mapRegionSelect').val()].geometry.coordinates[$('#mapAreaSelect').val()][0] = MapData.mapDataArea_0;
+		MapData.data[$('#mapRegionSelect').val()].geometry.coordinates.push(arr);
+		console.log(JSON.stringify(MapData.data));
+	}
+}
+
+$(document).ready(function(){  
+	 $.getJSON("./shenzhen.json", function (data) {
+		$.each(data.features ,function(i,Data) {
+			MapData.data.push(Data);
+		})
+		MapData.init();
+	 });
+});  
+                //data就是json对象了，不需要再转换
+	var map = new BMap.Map("map"); // 创建Map实例
+	var point = new BMap.Point(114.5435,22.5439); //地图中心点，广州市
+	map.centerAndZoom(point, 13); // 初始化地图,设置中心点坐标和地图级别。
+	map.enableScrollWheelZoom(true); //启用滚轮放大缩小
+	var newpoint;   //一个经纬度
+	var points = [];    //数组，放经纬度信息
+	var polyline = new BMap.Polyline(); //折线覆盖物
+
+	map.addEventListener("click",function(e){   //单击地图，形成折线覆盖物
+		newpoint = new BMap.Point(e.point.lng,e.point.lat);
+		if(MapData.accessPoint){
+			var coordArr = [];
+			coordArr.push(e.point.lng);								
+			coordArr.push(e.point.lat);
+			MapData.accessPointData.push(coordArr);
+			points.push(newpoint);  //将新增的点放到数组中
+			polyline.setPath(points);   //设置折线的点数组
+			map.addOverlay(polyline);   //将折线添加到地图上
+		}
+		console.info(MapData.accessPointData)
+	});
+	
+</script>
+</html>
